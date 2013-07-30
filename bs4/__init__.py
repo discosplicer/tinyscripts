@@ -17,8 +17,8 @@ http://www.crummy.com/software/BeautifulSoup/bs4/doc/
 """
 
 __author__ = "Leonard Richardson (leonardr@segfault.org)"
-__version__ = "4.2.1"
-__copyright__ = "Copyright (c) 2004-2013 Leonard Richardson"
+__version__ = "4.1.3"
+__copyright__ = "Copyright (c) 2004-2012 Leonard Richardson"
 __license__ = "MIT"
 
 __all__ = ['BeautifulSoup']
@@ -44,7 +44,7 @@ from .element import (
 
 # The very first thing we do is give a useful error if someone is
 # running this code under Python 3 without converting it.
-syntax_error = u'You are trying to run the Python 2 version of Beautiful Soup under Python 3. This will not work. You need to convert the code, either by installing it (`python setup.py install`) or by running 2to3 (`2to3 -w bs4`).'
+syntax_error = 'You are trying to run the Python 2 version of Beautiful Soup under Python 3. This will not work. You need to convert the code, either by installing it (`python setup.py install`) or by running 2to3 (`2to3 -w bs4`).'
 
 class BeautifulSoup(Tag):
     """
@@ -68,7 +68,7 @@ class BeautifulSoup(Tag):
     like HTML's <br> tag), call handle_starttag and then
     handle_endtag.
     """
-    ROOT_TAG_NAME = u'[document]'
+    ROOT_TAG_NAME = '[document]'
 
     # If the end-user gives no indication which tree builder they
     # want, look for one with these features.
@@ -138,12 +138,12 @@ class BeautifulSoup(Tag):
             "fromEncoding", "from_encoding")
 
         if len(kwargs) > 0:
-            arg = kwargs.keys().pop()
+            arg = list(kwargs.keys()).pop()
             raise TypeError(
                 "__init__() got an unexpected keyword argument '%s'" % arg)
 
         if builder is None:
-            if isinstance(features, basestring):
+            if isinstance(features, str):
                 features = [features]
             if features is None or len(features) == 0:
                 features = self.DEFAULT_BUILDER_FEATURES
@@ -201,9 +201,9 @@ class BeautifulSoup(Tag):
         """Create a new tag associated with this soup."""
         return Tag(None, self.builder, name, namespace, nsprefix, attrs)
 
-    def new_string(self, s, subclass=NavigableString):
+    def new_string(self, s):
         """Create a new NavigableString associated with this soup."""
-        navigable = subclass(s)
+        navigable = NavigableString(s)
         navigable.setup()
         return navigable
 
@@ -229,7 +229,7 @@ class BeautifulSoup(Tag):
 
     def endData(self, containerClass=NavigableString):
         if self.currentData:
-            currentData = u''.join(self.currentData)
+            currentData = ''.join(self.currentData)
             if (currentData.translate(self.STRIP_ASCII_SPACES) == '' and
                 not set([tag.name for tag in self.tagStack]).intersection(
                     self.builder.preserve_whitespace_tags)):
@@ -245,15 +245,13 @@ class BeautifulSoup(Tag):
             o = containerClass(currentData)
             self.object_was_parsed(o)
 
-    def object_was_parsed(self, o, parent=None, most_recent_element=None):
+    def object_was_parsed(self, o):
         """Add an object to the parse tree."""
-        parent = parent or self.currentTag
-        most_recent_element = most_recent_element or self._most_recent_element
-        o.setup(parent, most_recent_element)
-        if most_recent_element is not None:
-            most_recent_element.next_element = o
-        self._most_recent_element = o
-        parent.contents.append(o)
+        o.setup(self.currentTag, self.previous_element)
+        if self.previous_element:
+            self.previous_element.next_element = o
+        self.previous_element = o
+        self.currentTag.contents.append(o)
 
     def _popToTag(self, name, nsprefix=None, inclusivePop=True):
         """Pops the tag stack up to and including the most recent
@@ -297,12 +295,12 @@ class BeautifulSoup(Tag):
             return None
 
         tag = Tag(self, self.builder, name, namespace, nsprefix, attrs,
-                  self.currentTag, self._most_recent_element)
+                  self.currentTag, self.previous_element)
         if tag is None:
             return tag
-        if self._most_recent_element:
-            self._most_recent_element.next_element = tag
-        self._most_recent_element = tag
+        if self.previous_element:
+            self.previous_element.next_element = tag
+        self.previous_element = tag
         self.pushTag(tag)
         return tag
 
@@ -325,19 +323,15 @@ class BeautifulSoup(Tag):
             encoding_part = ''
             if eventual_encoding != None:
                 encoding_part = ' encoding="%s"' % eventual_encoding
-            prefix = u'<?xml version="1.0"%s?>\n' % encoding_part
+            prefix = '<?xml version="1.0"%s?>\n' % encoding_part
         else:
-            prefix = u''
+            prefix = ''
         if not pretty_print:
             indent_level = None
         else:
             indent_level = 0
         return prefix + super(BeautifulSoup, self).decode(
             indent_level, eventual_encoding, formatter)
-
-# Alias to make it easier to type import: 'from bs4 import _soup'
-_s = BeautifulSoup
-_soup = BeautifulSoup
 
 class BeautifulStoneSoup(BeautifulSoup):
     """Deprecated interface to an XML parser."""
@@ -362,4 +356,4 @@ class FeatureNotFound(ValueError):
 if __name__ == '__main__':
     import sys
     soup = BeautifulSoup(sys.stdin)
-    print soup.prettify()
+    print(soup.prettify())

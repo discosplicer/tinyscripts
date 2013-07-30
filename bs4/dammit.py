@@ -8,7 +8,7 @@ encoding; that's the tree builder's job.
 """
 
 import codecs
-from htmlentitydefs import codepoint2name
+from html.entities import codepoint2name
 import re
 import logging
 
@@ -55,7 +55,7 @@ class EntitySubstitution(object):
         reverse_lookup = {}
         characters_for_re = []
         for codepoint, name in list(codepoint2name.items()):
-            character = unichr(codepoint)
+            character = chr(codepoint)
             if codepoint != 34:
                 # There's no point in turning the quotation mark into
                 # &quot;, unless it happens within an attribute value, which
@@ -80,8 +80,6 @@ class EntitySubstitution(object):
     BARE_AMPERSAND_OR_BRACKET = re.compile("([<>]|"
                                            "&(?!#\d+;|#x[0-9a-fA-F]+;|\w+;)"
                                            ")")
-
-    AMPERSAND_OR_BRACKET = re.compile("([<>&])")
 
     @classmethod
     def _substitute_html_entity(cls, matchobj):
@@ -136,28 +134,6 @@ class EntitySubstitution(object):
     def substitute_xml(cls, value, make_quoted_attribute=False):
         """Substitute XML entities for special XML characters.
 
-        :param value: A string to be substituted. The less-than sign
-          will become &lt;, the greater-than sign will become &gt;,
-          and any ampersands will become &amp;. If you want ampersands
-          that appear to be part of an entity definition to be left
-          alone, use substitute_xml_containing_entities() instead.
-
-        :param make_quoted_attribute: If True, then the string will be
-         quoted, as befits an attribute value.
-        """
-        # Escape angle brackets and ampersands.
-        value = cls.AMPERSAND_OR_BRACKET.sub(
-            cls._substitute_xml_entity, value)
-
-        if make_quoted_attribute:
-            value = cls.quoted_attribute_value(value)
-        return value
-
-    @classmethod
-    def substitute_xml_containing_entities(
-        cls, value, make_quoted_attribute=False):
-        """Substitute XML entities for special XML characters.
-
         :param value: A string to be substituted. The less-than sign will
           become &lt;, the greater-than sign will become &gt;, and any
           ampersands that are not part of an entity defition will
@@ -174,7 +150,6 @@ class EntitySubstitution(object):
         if make_quoted_attribute:
             value = cls.quoted_attribute_value(value)
         return value
-
 
     @classmethod
     def substitute_html(cls, s):
@@ -218,9 +193,9 @@ class UnicodeDammit:
         self.tried_encodings = []
         self.contains_replacement_characters = False
 
-        if markup == '' or isinstance(markup, unicode):
+        if markup == '' or isinstance(markup, str):
             self.markup = markup
-            self.unicode_markup = unicode(markup)
+            self.unicode_markup = str(markup)
             self.original_encoding = None
             return
 
@@ -244,7 +219,7 @@ class UnicodeDammit:
                         break
 
         # If no luck and we have auto-detection library, try that:
-        if not u and not isinstance(self.markup, unicode):
+        if not u and not isinstance(self.markup, str):
             u = self._convert_from(chardet_dammit(self.markup))
 
         # As a last resort, try utf-8 and windows-1252:
@@ -298,6 +273,7 @@ class UnicodeDammit:
             return None
         self.tried_encodings.append((proposed, errors))
         markup = self.markup
+
         # Convert smart quotes to HTML if coming from an encoding
         # that might have them.
         if (self.smart_quotes_to is not None
@@ -341,7 +317,7 @@ class UnicodeDammit:
         elif data[:4] == '\xff\xfe\x00\x00':
             encoding = 'utf-32le'
             data = data[4:]
-        newdata = unicode(data, encoding, errors)
+        newdata = str(data, encoding, errors)
         return newdata
 
     def _detectEncoding(self, xml_data, is_html=False):
@@ -354,41 +330,41 @@ class UnicodeDammit:
             elif xml_data[:4] == b'\x00\x3c\x00\x3f':
                 # UTF-16BE
                 sniffed_xml_encoding = 'utf-16be'
-                xml_data = unicode(xml_data, 'utf-16be').encode('utf-8')
+                xml_data = str(xml_data, 'utf-16be').encode('utf-8')
             elif (len(xml_data) >= 4) and (xml_data[:2] == b'\xfe\xff') \
                      and (xml_data[2:4] != b'\x00\x00'):
                 # UTF-16BE with BOM
                 sniffed_xml_encoding = 'utf-16be'
-                xml_data = unicode(xml_data[2:], 'utf-16be').encode('utf-8')
+                xml_data = str(xml_data[2:], 'utf-16be').encode('utf-8')
             elif xml_data[:4] == b'\x3c\x00\x3f\x00':
                 # UTF-16LE
                 sniffed_xml_encoding = 'utf-16le'
-                xml_data = unicode(xml_data, 'utf-16le').encode('utf-8')
+                xml_data = str(xml_data, 'utf-16le').encode('utf-8')
             elif (len(xml_data) >= 4) and (xml_data[:2] == b'\xff\xfe') and \
                      (xml_data[2:4] != b'\x00\x00'):
                 # UTF-16LE with BOM
                 sniffed_xml_encoding = 'utf-16le'
-                xml_data = unicode(xml_data[2:], 'utf-16le').encode('utf-8')
+                xml_data = str(xml_data[2:], 'utf-16le').encode('utf-8')
             elif xml_data[:4] == b'\x00\x00\x00\x3c':
                 # UTF-32BE
                 sniffed_xml_encoding = 'utf-32be'
-                xml_data = unicode(xml_data, 'utf-32be').encode('utf-8')
+                xml_data = str(xml_data, 'utf-32be').encode('utf-8')
             elif xml_data[:4] == b'\x3c\x00\x00\x00':
                 # UTF-32LE
                 sniffed_xml_encoding = 'utf-32le'
-                xml_data = unicode(xml_data, 'utf-32le').encode('utf-8')
+                xml_data = str(xml_data, 'utf-32le').encode('utf-8')
             elif xml_data[:4] == b'\x00\x00\xfe\xff':
                 # UTF-32BE with BOM
                 sniffed_xml_encoding = 'utf-32be'
-                xml_data = unicode(xml_data[4:], 'utf-32be').encode('utf-8')
+                xml_data = str(xml_data[4:], 'utf-32be').encode('utf-8')
             elif xml_data[:4] == b'\xff\xfe\x00\x00':
                 # UTF-32LE with BOM
                 sniffed_xml_encoding = 'utf-32le'
-                xml_data = unicode(xml_data[4:], 'utf-32le').encode('utf-8')
+                xml_data = str(xml_data[4:], 'utf-32le').encode('utf-8')
             elif xml_data[:3] == b'\xef\xbb\xbf':
                 # UTF-8 with BOM
                 sniffed_xml_encoding = 'utf-8'
-                xml_data = unicode(xml_data[3:], 'utf-8').encode('utf-8')
+                xml_data = str(xml_data[3:], 'utf-8').encode('utf-8')
             else:
                 sniffed_xml_encoding = 'ascii'
                 pass
